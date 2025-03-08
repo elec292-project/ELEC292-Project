@@ -5,7 +5,7 @@ import numpy as np
 import os
 from glob import glob
 
-hdf5_path = "../outputs/raw_data.hdf5" # Output Path
+hdf5_path = "../outputs/data.hdf5" # Output Path
 
 # Raw Data Folders
 data_folders = {
@@ -31,7 +31,8 @@ with h5py.File(hdf5_path, "w") as hdf: # Opening/Creating HDF5 File
 
         user_walking_data_group = hdf.create_group(f"raw/{user}/walking")  # Create another hdf group
         user_jumping_data_group = hdf.create_group(f"raw/{user}/jumping")  # Create another hdf group
-
+        user_processed_walking_group = hdf.create_group(f"processed/{user}/walking")
+        user_processed_jumping_group = hdf.create_group(f"processed/{user}/jumping")
 
         csv_files = glob(os.path.join(folder, "*.csv")) # Get all files in directory
 

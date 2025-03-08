@@ -6,23 +6,23 @@ import os
 import matplotlib.pyplot as plt
 
 #######################################################################################################################################################
-# If you're running this code to make a plot, all you SHOULD (if i didnt fuck it up) need to do is change this axis to whatever parameter you want.
-acceleration_axis = "y"  # Options: x, y, z, abs_acc
+acceleration_axis = "z"  # Options: x, y, z, abs_acc
+output = "../outputs/plots/processed" # Where to store
+data_type = "processed" # Data "type" to plot (i.e raw, processed)
 #######################################################################################################################################################
+
+hdf5_path  = "../outputs/data.hdf5" # Get HDF5 file
 
 axis_map = {"x": 1, "y": 2, "z": 3, "abs_acc" : 4} # Map axis to the index they are in the HDF5 (it's stored as a numpy)
 axis_index = axis_map[acceleration_axis] # Get index
-
-hdf5_path  = "../outputs/raw_data.hdf5" # Get HDF5 file
-output = "../outputs/plots"
 
 data = {"walking": [], "jumping": []}  # Store data for walking & jumping
 
 # Load all the data
 with h5py.File(hdf5_path, "r") as hdf: # Read file
-    for user in hdf["raw"]: # Loop through all users
+    for user in hdf[data_type]: # Loop through all users
         for activity in ["walking", "jumping"]: # Make sure group is either walking or jumping
-            activity_path = f"raw/{user}/{activity}"
+            activity_path = f"{data_type}/{user}/{activity}"
             if activity_path in hdf: # If it's in the HDF
                 for dataset_name in hdf[activity_path]:  # Loop through datasets
                     dataset = hdf[f"{activity_path}/{dataset_name}"][:]  # Load dataset
