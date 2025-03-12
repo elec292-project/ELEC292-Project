@@ -57,4 +57,6 @@ with h5py.File(hdf5_path, "w") as hdf: # Opening/Creating HDF5 File
     train_group = hdf.create_group("segmented/train") # Train Group
     test_group = hdf.create_group("segmented/test") # Test Group
 
+print("Finished Data Storage")
+
 

@@ -12,12 +12,13 @@ with h5py.File(hdf5_path, 'a') as hdf:
                 data = hdf[f'raw/{user}/{activity}/{dataset}'][:] # Get all the data
 
                 filtered_data = data[data[:, 0] <= 150] # Filter the data based on if its <=150s
-                if activity == "walking": #If walking
-                    filtered_data = filtered_data[filtered_data[:, 4] < 10] # Filter z acceleration > 10
-                    filtered_data = filtered_data[filtered_data[:, 4] > -10] # Filter z acceleration < 10
+
+                # if activity == "walking": #If walking
+                #     filtered_data = filtered_data[filtered_data[:, 4] < 10] # Filter z acceleration > 10
+                #     filtered_data = filtered_data[filtered_data[:, 4] > -10] # Filter z acceleration < 10
 
                 # Moving average filter
-                window_size = 5
+                window_size = 10
                 filtered_data[:, 3] = np.convolve(filtered_data[:, 3], np.ones(window_size) / window_size, mode='same')
 
                 processed_activity = hdf[f'processed/{user}/{activity}'] # Processed activity group
@@ -26,3 +27,5 @@ with h5py.File(hdf5_path, 'a') as hdf:
                     del processed_activity[dataset] # Delete old processed data if there
 
                 processed_activity.create_dataset(dataset, data=filtered_data)
+
+print("Finished Preprocessing Data")
