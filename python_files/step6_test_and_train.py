@@ -71,7 +71,7 @@ train_labels = np.array(train_labels)
 test_labels = np.array(test_labels)
 
 # Define the Logistic Regression model
-model = LogisticRegression(max_iter=10000)
+model = LogisticRegression(max_iter=100000)
 
 # Train the model using the entire training data
 model.fit(train_data, train_labels)
