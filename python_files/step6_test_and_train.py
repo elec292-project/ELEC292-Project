@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
 
 # Load the HDF5 file containing the segmented data
 hdf5_path = "../outputs/data.hdf5"
@@ -63,7 +64,11 @@ with h5py.File(hdf5_path, "r") as hdf:
                     test_data.append(combined_data)
                     test_labels.append(activity_label)
 
-# Convert data into numpy arrays
+
+pca = PCA(n_components=50)
+train_data = pca.fit_transform(train_data)
+test_data = pca.transform(test_data)
+
 train_data = np.array(train_data)
 test_data = np.array(test_data)
 
@@ -71,7 +76,7 @@ train_labels = np.array(train_labels)
 test_labels = np.array(test_labels)
 
 # Define the Logistic Regression model
-model = LogisticRegression(max_iter=100000)
+model = LogisticRegression(max_iter=5000, class_weight='balanced')
 
 # Train the model using the entire training data
 model.fit(train_data, train_labels)

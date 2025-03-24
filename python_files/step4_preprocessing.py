@@ -1,6 +1,7 @@
 # Preprocess the data (remove noise)
 import h5py
 import numpy as np
+from scipy.interpolate import interp1d
 
 hdf5_path  = "../outputs/data.hdf5" # Get HDF5 file
 

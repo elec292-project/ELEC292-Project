@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 #######################################################################################################################################################
 acceleration_axes = ["x", "y", "z", "abs_acc"]  # Options: x, y, z, abs_acc
-output = "../outputs/plots/processed" # Where to store
-data_type = "processed" # Data "type" to plot (i.e raw, processed)
+output = "../outputs/plots/raw" # Where to store
+data_type = "raw" # Data "type" to plot (i.e raw, processed)
 #######################################################################################################################################################
 
 hdf5_path = "../outputs/data.hdf5" # Get HDF5 file
