@@ -3,114 +3,166 @@ from tkinter import filedialog, messagebox
 import pandas as pd
 import numpy as np
 import joblib
+from scipy.stats import skew
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-# Load the trained model
-model_filename = '../outputs/model.joblib'
-model = joblib.load(model_filename)
-
-# Constants
-EXPECTED_FEATURES = 2290
 
 
-# Function to load CSV file
-def load_csv():
-    file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-    if not file_path:
-        return
+def preprocess_data(csv_path):
+    data = pd.read_csv(csv_path)
+    data = data.to_numpy()
 
-    try:
-        # Load CSV file as numpy array
-        data = pd.read_csv(file_path).values
+    # filtered_data = data[data[:, 0] <= 150]
 
-        # Split into 5-second windows based on time differences
-        start_time = data[0, 0]
-        chunks = []
-        current_chunk = []
+    window_size = 10
+    for i in range(data.shape[1]):  # Iterate over every column
+        data[:, i] = np.convolve(data[:, i], np.ones(window_size) / window_size, mode='same')
 
-        for row in data:
-            time = row[0]
-            if time - start_time < 5:
-                current_chunk.append(row)
-            else:
-                if len(current_chunk) > 0:
-                    chunks.append(np.array(current_chunk))
-                current_chunk = [row]
-                start_time = time
-
-        # Add last chunk (if it exists)
-        if len(current_chunk) > 0:
-            chunks.append(np.array(current_chunk))
-
-        # Process chunks into model-friendly format
-        processed_chunks = []
-        for chunk in chunks:
-            # Flatten the chunk
-            flattened_chunk = chunk.flatten()
-
-            if flattened_chunk.shape[0] < EXPECTED_FEATURES:
-                # Pad with zeros if too small
-                padding = np.zeros(EXPECTED_FEATURES - flattened_chunk.shape[0])
-                flattened_chunk = np.concatenate([flattened_chunk, padding])
-            elif flattened_chunk.shape[0] > EXPECTED_FEATURES:
-                # Trim if too large
-                flattened_chunk = flattened_chunk[:EXPECTED_FEATURES]
-
-            processed_chunks.append(flattened_chunk)
-
-        processed_chunks = np.array(processed_chunks)
-
-        # Predict using the trained model
-        predictions = model.predict(processed_chunks)
-        labels = ["walking" if pred == 0 else "jumping" for pred in predictions]
-
-        # Save to output CSV
-        output_file = file_path.replace(".csv", "_predictions.csv")
-        output_df = pd.DataFrame(labels, columns=["Predicted Activity"])
-        output_df.to_csv(output_file, index=False)
-
-        # Plot results
-        plot_results(predictions)
-
-        messagebox.showinfo("Success", f"Predictions saved to {output_file}")
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to process file: {e}")
+    return data
 
 
-# Function to plot results
-def plot_results(predictions):
-    fig, ax = plt.subplots(figsize=(10, 4))
+def split_data_into_chunks(filtered_data):
+    # Set start and end times, arrays for chunks
+    start_time = filtered_data[0, 0]
+    chunks = []
+    current_chunk = []
 
-    # Create color map based on predictions
-    colors = ['blue' if pred == 0 else 'red' for pred in predictions]
+    for row in filtered_data:  # Loop through each row
+        time = row[0]  # Get the time
+        if time - start_time < 5:  # If 5 seconds haven't passed
+            current_chunk.append(row)  # Add it to the current chunk
+        else:  # If 5 seconds have passed
+            if len(current_chunk) > 0:
+                chunks.append(np.array(current_chunk))  # Add the chunk to list of all chunks
+            current_chunk = [row]  # Set the current row to be the start of the next chunk
+            start_time = time  # Set start time to the new current time
 
-    # Plot line segments based on predictions
-    x = np.arange(len(predictions))
-    for i in range(len(predictions) - 1):
-        ax.plot(x[i:i + 2], [predictions[i]] * 2, color=colors[i], linewidth=3)
+    # Final add to list (for last few rows of data)
+    if len(current_chunk) > 0:
+        chunks.append(np.array(current_chunk))
 
-    ax.set_title("Predicted Activities Over Time")
-    ax.set_xlabel("Window Index")
-    ax.set_ylabel("Activity (0 = walking, 1 = jumping)")
-    ax.set_yticks([0, 1])
-    ax.set_yticklabels(["Walking", "Jumping"])
-
-    # Embed plot into Tkinter window
-    canvas = FigureCanvasTkAgg(fig, master=window)
-    canvas.draw()
-    canvas.get_tk_widget().pack()
+    return chunks
 
 
-# Create GUI window
-window = tk.Tk()
-window.title("Activity Predictor")
-window.geometry("600x400")
+def extract_features(chunk):
+    features = {}
 
-# Add buttons
-load_button = tk.Button(window, text="Load CSV", command=load_csv, padx=10, pady=5)
-load_button.pack(pady=20)
+    # Ignore the first column (time)
+    chunk_data = chunk[:, 1:]  # Select all rows and columns except the first
 
-# Start GUI event loop
-window.mainloop()
+    # Define the column names
+    column_names = ["x", "y", "z", "abs_acc"]
+
+    # Loop over each column in the chunk (excluding the time column)
+    for col_idx in range(chunk_data.shape[1]):
+        column = chunk_data[:, col_idx]  # Get the data for the current column
+        col_name = column_names[col_idx]  # Get the column name
+
+        # Calculate various statistical features for the current column
+        features[f'{col_name}_mean'] = np.mean(column)
+        features[f'{col_name}_median'] = np.median(column)
+        features[f'{col_name}_min'] = np.min(column)
+        features[f'{col_name}_max'] = np.max(column)
+        features[f'{col_name}_range'] = np.ptp(column)  # Range (max - min)
+        features[f'{col_name}_variance'] = np.var(column)
+        features[f'{col_name}_std_dev'] = np.std(column)
+        features[f'{col_name}_skewness'] = skew(column)
+        features[f'{col_name}_kurtosis'] = np.max(column) - np.min(column)  # Rough kurtosis measure
+        features[f'{col_name}_sum'] = np.sum(column)
+
+    return features
+
+
+def normalize_features(features):
+    # Extract feature values as a list
+    features = dict(sorted(features.items()))
+
+    feature_values = list(features.values())
+
+    # Convert feature values into a numpy array for z-score standardization
+    feature_values = np.array(feature_values)
+
+    # Calculate mean and standard deviation for Z-score standardization
+    mean = np.mean(feature_values)
+    std_dev = np.std(feature_values)
+
+    # Apply Z-score standardization
+    standardized_values = (feature_values - mean) / std_dev
+
+    # Return the list of normalized feature values (without labels)
+    return standardized_values
+
+
+
+def predict_activity(chunk_features, model):
+    predictions = []
+
+    # Loop through each set of chunk features (which are now numpy arrays)
+    # Instead of reshaping each feature set, stack all chunk features together into a 2D array
+    chunk_features_array = np.array(chunk_features)  # This will have shape (n_chunks, n_features)
+    print(chunk_features_array.shape)
+    predictions = model.predict(chunk_features_array)  # Directly pass the entire array
+
+    predictions_proba = model.predict_proba(chunk_features_array)
+    print("Prediction probabilities:", predictions_proba)
+
+    return predictions
+
+
+
+
+def browse_file():
+    # Allow the user to browse for a CSV file
+    file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=[("CSV files", "*.csv")])
+    if file_path:
+        # Preprocess the data
+        filtered_data = preprocess_data(file_path)
+        # Split the preprocessed data into chunks
+        chunks = split_data_into_chunks(filtered_data)
+
+        # Extract features from the chunks
+        chunk_features = [normalize_features(extract_features(chunk)) for chunk in chunks]
+
+        # Load the saved model
+        model_path = "../outputs/model.pkl"
+        model = joblib.load(model_path)
+
+        # Predict the activity for each chunk (Walking or Jumping)
+        predictions = predict_activity(chunk_features, model)
+
+        # Prepare the data for output
+        output_data = []
+        for i, (chunk, prediction) in enumerate(zip(chunks, predictions)):
+            # Extract the starting time of each chunk
+            start_time = chunk[0, 0]
+            activity = "Walking" if prediction == 0 else "Jumping"
+            output_data.append([start_time, activity])
+
+        # Convert output data to a DataFrame and save to CSV
+        output_df = pd.DataFrame(output_data, columns=["Start Time", "Activity"])
+        output_df.to_csv("../outputs/chunk_predictions.csv", index=False)
+
+        messagebox.showinfo("Result", f"Finished processing data. Predictions saved to 'chunk_predictions.csv'.")
+
+
+def create_gui():
+    # Create the main window
+    window = tk.Tk()
+    window.title("Walking or Jumping?")
+
+    # Set window size
+    window.geometry("400x200")
+
+    # Create and pack the widgets
+    label = tk.Label(window, text="Select a CSV file to preprocess")
+    label.pack(pady=20)
+
+    browse_button = tk.Button(window, text="Browse", command=browse_file)
+    browse_button.pack(pady=20)
+
+    # Start the GUI event loop
+    window.mainloop()
+
+
+# Run the GUI application
+create_gui()
+

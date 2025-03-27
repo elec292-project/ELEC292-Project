@@ -5,13 +5,13 @@ import numpy as np
 import os
 from glob import glob
 
-hdf5_path = "../outputs/data.hdf5" # Output Path
+hdf5_path = "../outputs/data.hdf5"  # Output Path
 
 # Raw Data Folders
 data_folders = {
     "sindu": "../raw_data/sindu",
     "logan": "../raw_data/logan",
-    "finn": "../raw_data/finn",
+    # "finn": "../raw_data/finn",
 }
 
 # Required Data Columns, assigned to keywords

@@ -3,6 +3,9 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+import joblib
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # Load the HDF5 file containing the segmented data
 hdf5_path = "../outputs/data.hdf5"
@@ -28,15 +31,15 @@ with h5py.File(hdf5_path, "r") as hdf:
                 dataset = hdf[f"segmented/train/{user}/{activity}/{dataset_name}"]
                 for chunk_name in hdf[f"segmented/train/{user}/{activity}/{dataset_name}"]:
                     chunk = dataset[chunk_name]  # Get chunk
-                    data = chunk[:450]  # Take the first 450 rows
+                    # data = chunk[:450]  # Take the first 450 rows
 
                     # Extract statistical attributes from chunk attributes dynamically
                     attribute_values = [chunk.attrs[attr] for attr in chunk.attrs]  # Get all attribute values
 
                     # Concatenate time-series data with all attributes
-                    combined_data = np.concatenate([data.flatten(), attribute_values])
+                    # combined_data = np.concatenate([data.flatten(), attribute_values])
 
-                    train_data.append(combined_data)
+                    train_data.append(attribute_values)
                     train_labels.append(activity_label)
 
     # Loop through each user in testing data
@@ -53,14 +56,14 @@ with h5py.File(hdf5_path, "r") as hdf:
                 dataset = hdf[f"segmented/test/{user}/{activity}/{dataset_name}"]
                 for chunk_name in hdf[f"segmented/test/{user}/{activity}/{dataset_name}"]:
                     chunk = dataset[chunk_name]  # Get chunk
-                    data = chunk[:450]  # Take the first 450 rows
+                    # data = chunk[:450]  # Take the first 450 rows
 
                     # Extract statistical attributes from chunk attributes dynamically
                     attribute_values = [chunk.attrs[attr] for attr in chunk.attrs]  # Get all attribute values
                     # Concatenate time-series data with all attributes
-                    combined_data = np.concatenate([data.flatten(), attribute_values])
+                    # combined_data = np.concatenate([data.flatten(), attribute_values])
 
-                    test_data.append(combined_data)
+                    test_data.append(attribute_values)
                     test_labels.append(activity_label)
 
 # Convert data into numpy arrays
@@ -71,12 +74,14 @@ train_labels = np.array(train_labels)
 test_labels = np.array(test_labels)
 
 # Define the Logistic Regression model
-model = LogisticRegression(max_iter=100000)
+model = LogisticRegression(max_iter=1000)
 
 # Train the model using the entire training data
 model.fit(train_data, train_labels)
 
 # Evaluate on the test set (acting as both validation and test set)
+print(test_data)
+
 test_predictions = model.predict(test_data)
 test_accuracy = accuracy_score(test_labels, test_predictions)
 print(f"Test Accuracy: {test_accuracy*100:.4f}")
@@ -86,3 +91,8 @@ for i in range(len(test_predictions)):
     guess = "walking" if test_predictions[i] == 0 else "jumping"
     actual = "walking" if test_labels[i] == 0 else "jumping"
     print(f"Sample {i+1}: Bot's Guess = {guess}, Actual = {actual}")
+
+
+joblib.dump(model, '../outputs/model.pkl') # Save model
+
+

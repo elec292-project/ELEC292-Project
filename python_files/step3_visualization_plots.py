@@ -10,7 +10,7 @@ output = "../outputs/plots/processed" # Where to store
 data_type = "processed" # Data "type" to plot (i.e raw, processed)
 #######################################################################################################################################################
 
-hdf5_path = "../outputs/data.hdf5" # Get HDF5 file
+hdf5_path = "../outputs/data.hdf5"  # Get HDF5 file
 
 axis_map = {"x": 1, "y": 2, "z": 3, "abs_acc": 4} # Map axis to the index they are in the HDF5 (it's stored as a numpy)
 axis_indices = {axis: axis_map[axis] for axis in acceleration_axes} # Get indices for all axes
